@@ -19,6 +19,7 @@
   },
   "python.envFile": "${workspaceFolder}/.env",
   "python.languageServer": "None",
+  "peacock.color": "#de33a6",
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#e55fb9",
     "activityBar.background": "#e55fb9",
@@ -37,8 +38,7 @@
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.inactiveBackground": "#de33a699",
     "titleBar.inactiveForeground": "#e7e7e799"
-  },
-  "peacock.color": "#de33a6"
+  }
   // "python.languageServer": "Pylance",
   // "python.analysis.typeCheckingMode": "basic",
   // "python.analysis.autoImportCompletions": true

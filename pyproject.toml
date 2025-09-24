@@ -60,3 +60,7 @@ convention = "google"
 case-sensitive = true
 known-first-party = ["core", "config"]
 known-third-party = ["django", "strawberry", "strawberry_django"]
+
+# GraphQL Settings
+[tool.mypy]
+plugins = ["strawberry.ext.mypy_plugin"]
