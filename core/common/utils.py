@@ -1,16 +1,12 @@
 from django.http import Http404
 from django.shortcuts import get_list_or_404, get_object_or_404
-from rest_framework import serializers
-from rest_framework.exceptions import NotFound
-
-from core.api.exceptions import handle_api_exception
 
 
 def get_list(model_or_queryset, **kwargs):
     try:
         return get_list_or_404(model_or_queryset)
-    except Http404:
-        raise NotFound("Users Not Found")
+    except Http404 as exc:
+        raise exc
 
 
 def get_object(model_or_queryset, **kwargs):
@@ -21,25 +17,18 @@ def get_object(model_or_queryset, **kwargs):
 
 
 def update_object(obj, **kwargs):
-    try:
-        for key, value in kwargs.items():
-            setattr(obj, key, value)
+    for key, value in kwargs.items():
+        setattr(obj, key, value)
 
-        obj.save()
+    obj.save()
 
-        return obj
-    except Exception as e:
-        raise handle_api_exception(e, f"update {obj.__class__.__name__}")
+    return obj
 
 
 def create_serializer_class(name, fields):
-    return type(name, (serializers.Serializer,), fields)
+    # No-op placeholder to keep API compatibility if needed in future
+    raise NotImplementedError("Serializers are not available without DRF.")
 
 
 def inline_serializer(*, fields, data=None, **kwargs):
-    serializer_class = create_serializer_class(name="inline_serializer", fields=fields)
-
-    if data is not None:
-        return serializer_class(data=data, **kwargs)
-
-    return serializer_class(**kwargs)
+    raise NotImplementedError("inline_serializer is not available without DRF.")

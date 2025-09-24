@@ -16,7 +16,6 @@ CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ORIGIN_WHITELIST", default=[])
 
 # Application definition
 LOCAL_APPS = [
-    "core.api.apps.ApiConfig",
     "core.authentication.apps.AuthenticationConfig",
     "core.users.apps.UsersConfig",
     "core.documents.apps.DocumentsConfig",
@@ -24,16 +23,13 @@ LOCAL_APPS = [
 
 THIRD_PARTY_APPS: list[str] = [
     "corsheaders",
-    "drf_yasg",
     "django_celery_beat",
     "django_celery_results",
     "django_extensions",
     "django_filters",
     "easyaudit",
     "guardian",
-    "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
+    "strawberry_django",
 ]
 INSTALLED_APPS: list[str] = [
     "daphne",
@@ -148,15 +144,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATIC_URL = "/static/"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "core.api.exception_handler.drf_exception_handler",
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
-    "DEFAULT_RENDERER_CLASSES": ("core.api.renderers.CustomJSONRenderer",),
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ],
+# Strawberry settings
+STRAWBERRY_DJANGO = {
+    "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
+    "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,
 }
 
 APP_DOMAIN = env("APP_DOMAIN", default="http://localhost:8000")  # type: ignore
@@ -171,17 +162,13 @@ AUTHENTICATION_BACKENDS = (
 ANONYMOUS_USER_NAME = None
 GUARDIAN_GET_CONTENT_TYPE = "polymorphic.contrib.guardian.get_polymorphic_base_content_type"
 
-SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"},
-    },
-}
+# (removed Swagger settings)
 
 from config.settings.logging import *  # noqa
 from config.settings.cors import *  # noqa
 from config.settings.google_oauth2 import *  # noqa
 from config.settings.files_and_storages import *  # noqa
-from config.settings.jwt import *  # noqa
+# (removed DRF SimpleJWT settings)
 from config.settings.celery import *  # noqa
 from config.settings.sentry import *  # noqa
 
