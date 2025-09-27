@@ -16,19 +16,13 @@ def get_object(model_or_queryset, **kwargs):
         return None
 
 
-def update_object(obj, **kwargs):
-    for key, value in kwargs.items():
-        setattr(obj, key, value)
+def update_object(*, instance, fields: list[str], data: dict):
+    update_fields: list[str] = []
+    for field in fields:
+        if field in data and data[field] is not None:
+            setattr(instance, field, data[field])
+            update_fields.append(field)
 
-    obj.save()
-
-    return obj
-
-
-def create_serializer_class(name, fields):
-    # No-op placeholder to keep API compatibility if needed in future
-    raise NotImplementedError("Serializers are not available without DRF.")
-
-
-def inline_serializer(*, fields, data=None, **kwargs):
-    raise NotImplementedError("inline_serializer is not available without DRF.")
+    instance.full_clean()
+    instance.save(update_fields=update_fields or None)
+    return instance

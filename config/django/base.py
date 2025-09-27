@@ -28,8 +28,12 @@ THIRD_PARTY_APPS: list[str] = [
     "django_extensions",
     "django_filters",
     "easyaudit",
+    "simple_history",
     "guardian",
     "strawberry_django",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
 ]
 INSTALLED_APPS: list[str] = [
     "daphne",
@@ -40,6 +44,7 @@ INSTALLED_APPS: list[str] = [
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     *THIRD_PARTY_APPS,
     *LOCAL_APPS,
 ]
@@ -53,9 +58,11 @@ MIDDLEWARE: list[str] = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "easyaudit.middleware.easyaudit.EasyAuditMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -156,19 +163,33 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
     "guardian.backends.ObjectPermissionBackend",
 )
 
 ANONYMOUS_USER_NAME = None
 GUARDIAN_GET_CONTENT_TYPE = "polymorphic.contrib.guardian.get_polymorphic_base_content_type"
 
-# (removed Swagger settings)
+# django-allauth configuration
+SITE_ID = 1
+
+# Account configuration to use email-only authentication with custom User model
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "optional"
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_SIGNUP_FORM_CLASS = "core.authentication.forms.SignupForm"
+
+# Login/redirect URLs
+LOGIN_REDIRECT_URL = "/"
+LOGIN_URL = "/accounts/login/"
 
 from config.settings.logging import *  # noqa
 from config.settings.cors import *  # noqa
 from config.settings.google_oauth2 import *  # noqa
 from config.settings.files_and_storages import *  # noqa
-# (removed DRF SimpleJWT settings)
+
 from config.settings.celery import *  # noqa
 from config.settings.sentry import *  # noqa
 

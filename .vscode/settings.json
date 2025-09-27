@@ -38,7 +38,7 @@
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.inactiveBackground": "#de33a699",
     "titleBar.inactiveForeground": "#e7e7e799"
-  }
+}
   // "python.languageServer": "Pylance",
   // "python.analysis.typeCheckingMode": "basic",
   // "python.analysis.autoImportCompletions": true
