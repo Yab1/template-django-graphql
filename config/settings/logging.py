@@ -7,7 +7,6 @@ os.makedirs(f"{BASE_DIR}/logs", exist_ok=True)
 
 # Rich logging setup
 try:
-    from rich.logging import RichHandler
     from rich.theme import Theme
     from rich.traceback import install as rich_traceback_install
 
