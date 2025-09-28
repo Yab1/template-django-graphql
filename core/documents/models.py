@@ -58,4 +58,4 @@ class Document(BaseModel):
 
     @property
     def document_full_path(self) -> str:
-        return f"{env.str('MEDIA_STORAGE_ENDPOINT')}{self.document_path}"
+        return f"{env.str("MEDIA_STORAGE_ENDPOINT")}{self.document_path}"
