@@ -12,3 +12,4 @@ class SignupForm(forms.Form):
         user.phone_number = self.cleaned_data["phone_number"]
         user.save()
         return user
+
