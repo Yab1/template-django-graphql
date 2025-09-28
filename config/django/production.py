@@ -21,3 +21,6 @@ DATABASES = {
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ORIGIN_WHITELIST = env.list("CORS_ORIGIN_WHITELIST", default=[])  # type: ignore
+
+# Disable GraphiQL in production for security
+ENABLE_GRAPHIQL = False

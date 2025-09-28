@@ -123,7 +123,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "users.User"
 
-# API_AUTH_TYPE = "JWT" or "SESSION"
 API_AUTH_TYPE = "JWT"
 
 # Internationalization
@@ -131,7 +130,7 @@ API_AUTH_TYPE = "JWT"
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Africa/Addis_Ababa"
 
 USE_I18N = True
 
@@ -146,11 +145,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATIC_URL = "/static/"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Strawberry settings
-STRAWBERRY_DJANGO = {
-    "FIELD_DESCRIPTION_FROM_HELP_TEXT": True,
-    "TYPE_DESCRIPTION_FROM_MODEL_DOCSTRING": True,
-}
 
 APP_DOMAIN = env("APP_DOMAIN", default="http://localhost:8000")  # type: ignore
 
@@ -169,6 +163,8 @@ from config.settings.sentry import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
+
+from config.settings.gql import *  # noqa
 from config.settings.gql_auth import *  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
