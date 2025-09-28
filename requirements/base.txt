@@ -48,3 +48,4 @@ strawberry-graphql==0.282.0
 strawberry-graphql-django==0.65.1
 
 # Authentication
+strawberry-django-auth==0.378.4

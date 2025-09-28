@@ -29,6 +29,7 @@ THIRD_PARTY_APPS: list[str] = [
     "easyaudit",
     "simple_history",
     "strawberry_django",
+    "gqlauth",
 ]
 INSTALLED_APPS: list[str] = [
     "daphne",
@@ -52,6 +53,7 @@ MIDDLEWARE: list[str] = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "gqlauth.core.middlewares.django_jwt_middleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "easyaudit.middleware.easyaudit.EasyAuditMiddleware",
@@ -167,5 +169,6 @@ from config.settings.sentry import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
+from config.settings.gql_auth import *  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
