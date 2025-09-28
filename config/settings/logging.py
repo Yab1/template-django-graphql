@@ -5,76 +5,89 @@ from config.env import BASE_DIR
 # Ensure logs directory exists
 os.makedirs(f"{BASE_DIR}/logs", exist_ok=True)
 
-# Rich logging configuration
+# Rich logging setup
 try:
-    import rich
-    import rich.theme
+    from rich.logging import RichHandler
+    from rich.theme import Theme
+    from rich.traceback import install as rich_traceback_install
 
-    # Custom theme for better log colors
-    my_theme = rich.theme.Theme({
+    # Install rich traceback for pretty errors
+    rich_traceback_install(show_locals=True, suppress=[])
+
+    # Custom theme for log levels
+    custom_theme = Theme({
         "logging.level.debug": "dim white",
         "logging.level.info": "bold blue",
         "logging.level.warning": "bold yellow",
         "logging.level.error": "bold red",
         "logging.level.critical": "bold red on white",
     })
-    rich.reconfigure(theme=my_theme)
+
+    # Reconfigure rich theme
+    import rich
+
+    rich.reconfigure(theme=custom_theme)
 
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
+# Formatters
 FORMATTERS = {
     "verbose": {
-        "format": "{levelname} {asctime:s} {threadName} {thread:d} {module} {filename} {lineno:d} {name} {funcName} {process:d} {message}",  # noqa: E501
+        "format": "{levelname} {asctime} {threadName} {module} {filename}:{lineno} {name} {funcName} {message}",
         "style": "{",
     },
     "simple": {
-        "format": "{levelname} {asctime:s} {module} {filename} {lineno:d} {funcName} {message}",
+        "format": "{levelname} {asctime} {module}:{lineno} {funcName} {message}",
         "style": "{",
     },
 }
 
+# Handlers
 HANDLERS = {
     "console_handler": {
         "class": "rich.logging.RichHandler" if RICH_AVAILABLE else "logging.StreamHandler",
-        "formatter": "simple" if not RICH_AVAILABLE else None,
+        "formatter": None if RICH_AVAILABLE else "simple",
         "rich_tracebacks": True,
         "show_time": True,
         "show_path": False,
+        "markup": True,  # enables emojis and colors in messages
     },
-    "my_handler": {
+    "file_handler": {
         "class": "logging.handlers.RotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/django.log",
         "mode": "a",
-        "encoding": "utf-8",
         "formatter": "simple",
         "backupCount": 5,
-        "maxBytes": 1024 * 1024 * 5,  # 5 MB
+        "maxBytes": 5 * 1024 * 1024,  # 5MB
+        "encoding": "utf-8",
     },
-    "my_handler_detailed": {
+    "detailed_file_handler": {
         "class": "logging.handlers.RotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/django_detailed.log",
         "mode": "a",
         "formatter": "verbose",
         "backupCount": 5,
-        "maxBytes": 1024 * 1024 * 5,  # 5 MB
+        "maxBytes": 5 * 1024 * 1024,  # 5MB
+        "encoding": "utf-8",
     },
 }
 
+# Loggers
 LOGGERS = {
     "django": {
-        "handlers": ["console_handler", "my_handler_detailed"],
+        "handlers": ["console_handler", "detailed_file_handler"],
         "level": "INFO",
         "propagate": False,
     },
     "django.request": {
-        "handlers": ["my_handler"],
+        "handlers": ["file_handler"],
         "level": "WARNING",
         "propagate": False,
     },
     "core": {
-        "handlers": ["console_handler", "my_handler_detailed"],
+        "handlers": ["console_handler", "detailed_file_handler"],
         "level": "INFO",
         "propagate": False,
     },
