@@ -9,7 +9,6 @@ from .schema import schema
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # path("graphql/", AsyncGraphQLView.as_view(schema=schema), name="graphql"),
     path("graphql/", csrf_exempt(AsyncGraphQLView.as_view(schema=schema)), name="graphql"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
