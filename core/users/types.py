@@ -13,4 +13,4 @@ class AppUserType:
     is_active: strawberry.auto
     is_staff: strawberry.auto
     is_superuser: strawberry.auto
-    phone_number: strawberry.auto
+    phone_number: str
