@@ -9,8 +9,8 @@ class UsersMutation:
     password_change = auth_mutations.PasswordChange.field
 
     # Public mutations
-    token_auth = auth_mutations.ObtainJSONWebToken.field
-    register = auth_mutations.Register.field
+    sign_in = auth_mutations.ObtainJSONWebToken.field
+    sign_up = auth_mutations.Register.field
     password_reset = auth_mutations.PasswordReset.field
     password_set = auth_mutations.PasswordSet.field
     refresh_token = auth_mutations.RefreshToken.field
