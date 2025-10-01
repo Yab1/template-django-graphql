@@ -16,6 +16,18 @@ def get_object(model_or_queryset, **kwargs):
         return None
 
 
+def create_object(*, model, data):
+    # Handle both dict and object inputs
+    if hasattr(data, "__dict__"):
+        # Convert object to dict and filter out None values
+        data_dict = {k: v for k, v in data.__dict__.items() if v is not None}
+    else:
+        # If it's already a dict, filter out None values
+        data_dict = {k: v for k, v in data.items() if v is not None}
+
+    return model.objects.create(**data_dict)
+
+
 def update_object(*, instance, fields: list[str], data: dict):
     update_fields: list[str] = []
     for field in fields:
