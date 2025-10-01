@@ -19,6 +19,7 @@ LOCAL_APPS = [
     "core.common.apps.CommonConfig",
     "core.users.apps.UsersConfig",
     "core.documents.apps.DocumentsConfig",
+    "core.family.apps.FamilyConfig",
 ]
 
 THIRD_PARTY_APPS: list[str] = [
