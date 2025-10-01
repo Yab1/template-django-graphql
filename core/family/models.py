@@ -1,8 +1,16 @@
 from django.db import models
 
+from core.common.models import BaseModel
 
-class GrandParent(models.Model):
+
+class GenderChoices(models.TextChoices):
+    MALE = "MALE", "Male"
+    FEMALE = "FEMALE", "Female"
+
+
+class GrandParent(BaseModel):
     name = models.CharField(max_length=255)
+    gender = models.CharField(max_length=255, choices=GenderChoices.choices, default=GenderChoices.MALE)
 
     class Meta:
         verbose_name = "Grand Parent"
@@ -12,9 +20,10 @@ class GrandParent(models.Model):
         return self.name
 
 
-class Parent(models.Model):
+class Parent(BaseModel):
     name = models.CharField(max_length=255)
     grandparent = models.ForeignKey(GrandParent, on_delete=models.CASCADE)
+    gender = models.CharField(max_length=255, choices=GenderChoices.choices, default=GenderChoices.MALE)
 
     class Meta:
         verbose_name = "Parent"
@@ -24,9 +33,10 @@ class Parent(models.Model):
         return self.name
 
 
-class Child(models.Model):
+class Child(BaseModel):
     name = models.CharField(max_length=255)
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE)
+    gender = models.CharField(max_length=255, choices=GenderChoices.choices, default=GenderChoices.MALE)
 
     class Meta:
         verbose_name = "Child"
