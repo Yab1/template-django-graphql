@@ -16,6 +16,7 @@ CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ORIGIN_WHITELIST", default=[])
 
 # Application definition
 LOCAL_APPS = [
+    "core.common.apps.CommonConfig",
     "core.users.apps.UsersConfig",
     "core.documents.apps.DocumentsConfig",
 ]

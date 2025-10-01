@@ -107,3 +107,27 @@ run-celery-beat:
 run-celery-all:
 	@echo "Running celery worker and beat..."
 	@celery -A config.settings.celery worker --loglevel=info --pool=solo --beat
+
+# Create a new core app with GraphQL scaffolding
+.PHONY: create-app
+create-app:
+	@if [ -z "$(APP)" ]; then echo "Usage: make create-app APP=<app_name> [REGISTER=1]"; exit 2; fi
+	@echo "Creating app '$(APP)'..."
+	@python manage.py create_app $(APP) $(if $(REGISTER),--register,)
+
+# Convenience: allow `make create-app/<app>` and `make create-app-<app>`
+.PHONY: create-app/%
+create-app/%:
+	@$(MAKE) --no-print-directory create-app APP=$* $(if $(REGISTER),REGISTER=$(REGISTER),)
+
+.PHONY: create-app-%
+create-app-%:
+	@$(MAKE) --no-print-directory create-app APP=$* $(if $(REGISTER),REGISTER=$(REGISTER),)
+
+# Convenience: allow `make create-app <app>` (second word as APP)
+APP ?= $(word 2,$(MAKECMDGOALS))
+ifneq ($(APP),)
+.PHONY: $(APP)
+$(APP):
+	@:
+endif
