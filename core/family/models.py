@@ -4,8 +4,8 @@ from core.common.models import BaseModel
 
 
 class GenderChoices(models.TextChoices):
-    MALE = "MALE", "Male"
-    FEMALE = "FEMALE", "Female"
+    MALE = "male", "Male"
+    FEMALE = "female", "Female"
 
 
 class GrandParent(BaseModel):
