@@ -4,7 +4,6 @@ from strawberry.schema.config import StrawberryConfig
 from strawberry.tools import merge_types
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
-from core.family.mutations import FamilyMutation
 from core.users.mutations import UsersMutation
 from core.users.queries import UsersQuery
 
@@ -15,10 +14,9 @@ class CommonQuery:
 
 
 Query = merge_types("Query", (CommonQuery, UsersQuery))
-Mutation = merge_types("Mutation", (UsersMutation, FamilyMutation))
+Mutation = merge_types("Mutation", (UsersMutation))
 
 
-# Use JwtSchema to inject request.user and JWT handling
 schema = JwtSchema(
     query=Query,
     mutation=Mutation,
