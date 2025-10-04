@@ -14,7 +14,7 @@ class CommonQuery:
 
 
 Query = merge_types("Query", (CommonQuery, UsersQuery))
-Mutation = merge_types("Mutation", (UsersMutation))
+Mutation = merge_types("Mutation", (UsersMutation,))
 
 
 schema = JwtSchema(
