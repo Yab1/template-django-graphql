@@ -11,7 +11,17 @@ from .schema import schema
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("graphql/", csrf_exempt(AsyncGraphQLView.as_view(schema=schema, graphiql=ENABLE_GRAPHIQL)), name="graphql"),
+    path(
+        "graphql/",
+        csrf_exempt(
+            AsyncGraphQLView.as_view(
+                schema=schema,
+                graphiql=ENABLE_GRAPHIQL,
+                multipart_uploads_enabled=True,
+            ),
+        ),
+        name="graphql",
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
