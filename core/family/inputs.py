@@ -1,19 +1,26 @@
 import strawberry_django
-from strawberry.file_uploads import Upload
 
-from core.family.models import Attachments, GrandParent
+from core.common.utils import inline_input, inline_partial_input
+from core.family.models import GrandChild, GrandParent
 
 
 @strawberry_django.input(GrandParent, fields=["name", "gender"], description="Grand Parent")
 class GrandParentInput:
-    profile_picture: "AttachmentsInput"
+    grand_children: inline_input(
+        model=GrandChild,
+        fields=["name", "gender"],
+        description="Grand Child",
+        many=True,
+        required=True,
+    )
 
 
 @strawberry_django.partial(GrandParent, fields=["id", "name", "gender"], description="Grand Parent")
 class GrandParentPartialInput:
-    pass
-
-
-@strawberry_django.input(Attachments, fields=["content_type", "size"], description="Attachments")
-class AttachmentsInput:
-    data: Upload
+    grand_children: inline_partial_input(
+        model=GrandChild,
+        fields=["id", "name", "gender"],
+        description="Grand Child",
+        many=True,
+        required=False,
+    )
