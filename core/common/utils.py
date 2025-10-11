@@ -137,6 +137,14 @@ def _build_inline_input_class(
 
 
 def _apply_many_required(base_type: Any, *, many: bool, required: bool) -> Any:
+    """Return an annotation adjusted for cardinality and optionality.
+
+    - If many is True, annotate as a list of the base type.
+    - If required is False, annotate as Optional[...] (using | None syntax).
+
+    This keeps field annotations concise and consistent across inputs and types.
+    """
+
     annotated: Any = base_type
     if many:
         annotated = list[annotated]
@@ -155,11 +163,32 @@ def inline_input(
     many: bool = False,
     required: bool = True,
 ):
-    """Create a Strawberry Django input class inline.
+    """Construct a Strawberry Django input type inline for field annotations.
 
-    Example usage in an input type:
-        class ParentInput:
-            children: list[inline_input(model=Child, fields=["name", "gender"])]
+    This returns a dynamically created Strawberry input class that you can use
+    directly inside annotations without declaring a separate class.
+
+    Args:
+        model: Django model class that the input maps to.
+        fields: List of field names to expose on the input.
+        description: Optional description for the generated input type.
+        name: Optional explicit class name; when omitted a cached name is used.
+        extra_annotations: Optional extra type annotations to add as fields.
+        many: If True, annotate as a list of this input. Defaults to False.
+        required: If False, annotate as Optional[...] (| None). Defaults to True.
+
+    Examples:
+        Single required child:
+            child: inline_input(model=Child, fields=["name", "gender"])  # required single
+
+        Optional single child:
+            child: inline_input(model=Child, fields=["name"], required=False)
+
+        Required list of children:
+            children: inline_input(model=Child, fields=["name"], many=True)
+
+        Optional list of children:
+            children: inline_input(model=Child, fields=["name"], many=True, required=False)
     """
 
     base = _build_inline_input_class(
@@ -183,7 +212,21 @@ def inline_partial_input(
     many: bool = False,
     required: bool = True,
 ):
-    """Create a Strawberry Django partial input class inline (for updates)."""
+    """Construct a Strawberry Django partial input type inline for updates.
+
+    Fields behave like Django's partial updates: only provided fields are
+    validated/updated. Use ``many`` and ``required`` to control cardinality and
+    optionality of the annotation similarly to ``inline_input``.
+
+    Args:
+        model: Django model class.
+        fields: Field names to expose; typically includes "id" for PATCH/PUT.
+        description: Optional description.
+        name: Optional explicit class name.
+        extra_annotations: Optional extra type annotations.
+        many: If True, return a list annotation of this partial input.
+        required: If False, mark the annotation as Optional.
+    """
 
     base = _build_inline_input_class(
         model=model,
@@ -245,6 +288,27 @@ def inline_type(
     many: bool = False,
     required: bool = True,
 ):
+    """Construct a Strawberry Django output type inline for field annotations.
+
+    Useful for referencing nested types without importing or declaring full
+    classes. Mirrors the API of ``inline_input`` for consistency.
+
+    Args:
+        model: Django model class.
+        fields: Field selection for the type ("__all__" or list of names).
+        description: Optional description text.
+        name: Optional explicit class name (disables cache reuse when set).
+        extra_annotations: Optional extra type annotations to add as fields.
+        many: If True, return a list annotation of this type.
+        required: If False, mark the annotation as Optional.
+
+    Examples:
+        Required list of nested children:
+            grand_children: inline_type(model=GrandChild, fields="__all__", many=True)
+
+        Optional single nested relation:
+            parent: inline_type(model=GrandChild, fields="__all__", required=False)
+    """
     base = _build_inline_type_class(
         model=model,
         fields=fields,
