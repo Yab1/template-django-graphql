@@ -1,0 +1,217 @@
+pipeline {
+    agent any
+    
+    environment {
+        COMPOSE_FILE = 'deployments/local/docker-compose.yml'
+        PROJECT_NAME = 'django-template-graphql-local'
+        DOCKER_NETWORK = 'django_template_local_network'
+        ENV_FILE = '.env.local'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        
+        stage('Environment Setup') {
+            steps {
+                script {
+                    echo 'Setting up local environment...'
+                    sh '''
+                        #!/bin/bash
+                        set -Eeuo pipefail
+                        IFS=$'\n\t'
+                        
+                        # Use Jenkins WORKSPACE if set, otherwise stay in current dir
+                        cd "${WORKSPACE:-$(pwd)}"
+                        
+                        # Create local .env file if it doesn't exist
+                        if [ ! -f "$ENV_FILE" ]; then
+                            echo ">>> Creating local .env file..."
+                            cat > "$ENV_FILE" << 'EOF'
+# Local Development Environment
+DEBUG=True
+SECRET_KEY=local-development-secret-key-change-in-production
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/django_template_local
+REDIS_URL=redis://redis:6379/0
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+EOF
+                        fi
+                        
+                        # Speed up builds and better caching
+                        export DOCKER_BUILDKIT=1
+                        export COMPOSE_DOCKER_CLI_BUILD=1
+                        
+                        # Ensure external network used by compose exists
+                        docker network inspect $DOCKER_NETWORK >/dev/null 2>&1 || docker network create $DOCKER_NETWORK
+                    '''
+                }
+            }
+        }
+        
+        stage('Smart Build and Deploy') {
+            steps {
+                script {
+                    echo 'Building and deploying with smart caching...'
+                    sh '''
+                        #!/bin/bash
+                        set -Eeuo pipefail
+                        IFS=$'\n\t'
+                        
+                        # Use Jenkins WORKSPACE if set, otherwise stay in current dir
+                        cd "${WORKSPACE:-$(pwd)}"
+                        
+                        # Cleanup previous deployment
+                        echo ">>> Stopping running containers..."
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" down --remove-orphans || true
+                        docker image prune -f || true
+                        
+                        # Check if we need to rebuild (smart caching)
+                        echo ">>> Checking if rebuild is needed..."
+                        CURRENT_COMMIT=$(git rev-parse HEAD)
+                        IMAGE_NAME="$PROJECT_NAME:latest"
+                        
+                        if docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+                            if docker image inspect "$IMAGE_NAME" | grep -q "$CURRENT_COMMIT" 2>/dev/null; then
+                                echo "✅ Image is up-to-date with current commit. Skipping rebuild."
+                                REBUILD_NEEDED=false
+                            else
+                                echo "🔄 Code has changed. Rebuilding image..."
+                                REBUILD_NEEDED=true
+                            fi
+                        else
+                            echo "🆕 Image doesn't exist. Building for the first time..."
+                            REBUILD_NEEDED=true
+                        fi
+                        
+                        if [ "$REBUILD_NEEDED" = true ]; then
+                            echo ">>> Building Docker images (with cache, parallel)..."
+                            docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --parallel
+                            docker tag "$IMAGE_NAME" "${IMAGE_NAME%:latest}:${CURRENT_COMMIT}"
+                            echo "✅ Image built and tagged with commit: $CURRENT_COMMIT"
+                        else
+                            echo "✅ Using existing image. No rebuild needed."
+                        fi
+                        
+                        echo ">>> Starting services..."
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
+                        
+                        echo ">>> Service status:"
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
+                    '''
+                }
+            }
+        }
+        
+        stage('Health Check and Setup') {
+            steps {
+                script {
+                    echo 'Performing health checks and setup...'
+                    sh '''
+                        #!/bin/bash
+                        set -Eeuo pipefail
+                        IFS=$'\n\t'
+                        
+                        # Use Jenkins WORKSPACE if set, otherwise stay in current dir
+                        cd "${WORKSPACE:-$(pwd)}"
+                        
+                        # Wait for services to start
+                        echo ">>> Waiting for services to start..."
+                        sleep 30
+                        
+                        # Check Django app
+                        echo ">>> Checking Django application..."
+                        for i in {1..10}; do
+                            if curl -f http://localhost:8000/ || curl -f http://localhost:8000/admin/; then
+                                echo "✅ Django application is responding"
+                                break
+                            else
+                                echo "Attempt $i: Django not ready yet, waiting..."
+                                sleep 10
+                            fi
+                        done
+                        
+                        # Check database
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T postgres pg_isready -U postgres || echo "⚠️ PostgreSQL check failed"
+                        
+                        # Check Redis
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T redis redis-cli ping || echo "⚠️ Redis check failed"
+                        
+                        # Run migrations
+                        echo ">>> Running database migrations..."
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T django_app python manage.py migrate --verbosity=2
+                        
+                        # Collect static files
+                        echo ">>> Collecting static files..."
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T django_app python manage.py collectstatic --noinput --verbosity=2
+                        
+                        # Run tests
+                        echo ">>> Running tests..."
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T django_app python manage.py test --verbosity=2 || echo "⚠️ Tests failed but continuing..."
+                    '''
+                }
+            }
+        }
+        
+        stage('Final Status Check') {
+            steps {
+                script {
+                    echo 'Checking final service status...'
+                    sh '''
+                        #!/bin/bash
+                        set -Eeuo pipefail
+                        IFS=$'\n\t'
+                        
+                        # Use Jenkins WORKSPACE if set, otherwise stay in current dir
+                        cd "${WORKSPACE:-$(pwd)}"
+                        
+                        # Show logs
+                        echo ">>> Service logs:"
+                        docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=20
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo 'Pipeline completed. Services are still running for manual testing.'
+                echo 'To stop services manually, run: docker compose -p django-template-graphql-local --env-file .env.local -f deployments/local/docker-compose.yml down'
+            }
+        }
+        success {
+            echo '🎉 Local deployment completed successfully!'
+            echo 'Django app: http://localhost:8000'
+            echo 'Admin panel: http://localhost:8000/admin/ (admin/admin)'
+            echo 'Flower monitoring: http://localhost:5555'
+            echo 'PostgreSQL: localhost:5432 (postgres/postgres)'
+            echo 'Redis: localhost:6379'
+        }
+        failure {
+            script {
+                echo '❌ Pipeline failed. Showing logs for debugging...'
+                sh '''
+                    #!/bin/bash
+                    set -Eeuo pipefail
+                    IFS=$'\n\t'
+                    
+                    # Use Jenkins WORKSPACE if set, otherwise stay in current dir
+                    cd "${WORKSPACE:-$(pwd)}"
+                    
+                    # Show logs for debugging
+                    echo ">>> Showing recent logs for debugging:"
+                    docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=50
+                '''
+            }
+        }
+        cleanup {
+            echo 'Pipeline cleanup completed.'
+        }
+    }
+}

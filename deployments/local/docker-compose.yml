@@ -1,0 +1,120 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: django_template_postgres_local
+    environment:
+      POSTGRES_DB: django_template_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    networks:
+      - django_template_local_network
+
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: django_template_redis_local
+    ports:
+      - "6379:6379"
+    networks:
+      - django_template_local_network
+
+  # Django application service
+  django_app:
+    container_name: django_template_django_local
+    build:
+      context: ../..
+      dockerfile: deployments/local/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.django.base
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/django_template_local
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - django_template_media_local:/usr/src/app/media
+      - django_template_static_local:/usr/src/app/static
+    networks:
+      - django_template_local_network
+
+  # Celery worker service
+  celery_worker:
+    container_name: django_template_celery_local
+    build:
+      context: ../..
+      dockerfile: deployments/local/Dockerfile
+    command: celery -A config.settings.celery.app worker --loglevel=info --pool=solo
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.django.base
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/django_template_local
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+    depends_on:
+      - postgres
+      - redis
+      - django_app
+    volumes:
+      - django_template_media_local:/usr/src/app/media
+      - django_template_static_local:/usr/src/app/static
+    networks:
+      - django_template_local_network
+
+  # Celery Beat service
+  celery_beat:
+    container_name: django_template_celery_beat_local
+    build:
+      context: ../..
+      dockerfile: deployments/local/Dockerfile
+    command: celery -A config.settings.celery.app beat --loglevel=info
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.django.base
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/django_template_local
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+    depends_on:
+      - postgres
+      - redis
+      - django_app
+    volumes:
+      - django_template_media_local:/usr/src/app/media
+      - django_template_static_local:/usr/src/app/static
+    networks:
+      - django_template_local_network
+
+  # Flower monitoring
+  flower:
+    container_name: django_template_flower_local
+    build:
+      context: ../..
+      dockerfile: deployments/local/Dockerfile
+    command: celery -A config.settings.celery.app flower --loglevel=info --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.django.base
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/django_template_local
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+    depends_on:
+      - postgres
+      - redis
+      - django_app
+    networks:
+      - django_template_local_network
+
+volumes:
+  postgres_data_local:
+  django_template_media_local:
+  django_template_static_local:
+
+networks:
+  django_template_local_network:
+    name: django_template_local_network
