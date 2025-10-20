@@ -100,14 +100,20 @@ class StrawberryCRUDGenerator:
 
     def _merge_with_defaults(self, defaults: dict, model_config: dict) -> dict:
         """Merge model configuration with defaults"""
-        merged = defaults.copy()
+        import copy
+
+        merged = copy.deepcopy(defaults)
 
         def deep_merge(d1, d2):
             for key, value in d2.items():
                 if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
                     deep_merge(d1[key], value)
                 else:
-                    d1[key] = value
+                    # For lists, replace completely (don't merge)
+                    if isinstance(value, list):
+                        d1[key] = value
+                    else:
+                        d1[key] = value
 
         deep_merge(merged, model_config)
         return merged
@@ -116,10 +122,6 @@ class StrawberryCRUDGenerator:
         """Find all models in specified apps"""
         apps, _models = get_django_components()
         found_models = []
-
-        # Load config if not already loaded
-        if not self.config:
-            self.config = self._load_yaml_config(apps_list)
 
         for app_name in apps_list:
             try:
@@ -182,9 +184,9 @@ class StrawberryCRUDGenerator:
         if field_type in ["BooleanField"]:
             return bool
         if field_type in ["DateTimeField"]:
-            return strawberry.auto
+            return str  # Use string for now, can be improved later
         if field_type in ["DateField"]:
-            return strawberry.auto
+            return str  # Use string for now, can be improved later
         if field_type in ["UUIDField"]:
             return strawberry.ID
         if field_type in ["ForeignKey", "OneToOneField"]:
@@ -209,19 +211,24 @@ class StrawberryCRUDGenerator:
         fields_config = config.get("fields", {})
         include_fields = fields_config.get("include", [])
         exclude_fields = fields_config.get("exclude", [])
+        read_only_fields = fields_config.get("read_only", [])
 
         # Build field definitions
         attrs = {"__annotations__": {}}
 
         for field in model._meta.fields:
+            # Skip auto fields and ID fields for input (they will be generated automatically)
+            if field.get_internal_type() in ["AutoField", "BigAutoField", "UUIDField"]:
+                continue
+
+            # Skip read-only fields for input
+            if field.name in read_only_fields:
+                continue
+
             if field.name in exclude_fields:
                 continue
 
             if include_fields and field.name not in include_fields:
-                continue
-
-            # Skip auto fields and ID fields for input (they will be generated automatically)
-            if field.get_internal_type() in ["AutoField", "BigAutoField", "UUIDField"]:
                 continue
 
             field_type = self.get_strawberry_field_type(field)
@@ -337,8 +344,10 @@ class StrawberryCRUDGenerator:
     def generate_complete_schema(self, apps_list: List[str]) -> strawberry.Schema:
         """Generate complete GraphQL schema with all models"""
         try:
-            # Load YAML config for the specified apps
-            self.config = self._load_yaml_config(apps_list)
+            # Load YAML config for the specified apps only if not already loaded
+            if not self.config:
+                self.config = self._load_yaml_config(apps_list)
+                self.apps_list = apps_list
 
             # Find all models in the specified apps
             models_to_include = self.find_all_models(apps_list)
