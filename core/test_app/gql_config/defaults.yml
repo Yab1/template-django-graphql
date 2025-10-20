@@ -1,0 +1,43 @@
+# Default Configuration for Test App
+# These defaults will be applied to all models unless overridden
+
+defaults:
+  # Field Configuration
+  fields:
+    include: ["id", "name", "created_at", "updated_at"]
+    exclude: []
+    read_only: ["id", "created_at", "updated_at"]
+    write_only: []
+  
+  # Relationship Configuration
+  relationships:
+    max_depth: 3
+    nested_creation: true
+    nested_updates: true
+  
+  # Security Configuration
+  security:
+    login_required: false
+    permissions: []
+    sensitive_fields: []
+  
+  # Cache Configuration
+  cache:
+    enabled: true
+    ttl: 300
+    key_prefix: "test_"
+  
+  # Business Rules
+  business_rules: {}
+  
+  # Webhook Configuration
+  webhook_events: ["create", "update", "delete"]
+  webhook_urls: []
+  
+  # GraphQL Configuration
+  graphql:
+    queries: ["list", "detail", "count"]
+    mutations: ["create", "update", "delete"]
+    nested_creation: true
+    nested_updates: true
+    cascade_delete: true

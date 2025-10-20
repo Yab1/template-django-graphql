@@ -1,0 +1,342 @@
+# Comprehensive Test Models Configuration
+# This file configures all test models for the GraphQL Generator
+
+models:
+  # Basic Models
+  Category:
+    api_name: "category"
+    api_description: "Category management for testing ForeignKey relationships"
+    
+    fields:
+      include: ["id", "name", "description", "is_active", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      test_models:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+
+  Tag:
+    api_name: "tag"
+    api_description: "Tag management for testing ManyToMany relationships"
+    
+    fields:
+      include: ["id", "name", "color", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      test_models:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      employees:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      projects:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      tasks:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+
+  Author:
+    api_name: "author"
+    api_description: "Author management for testing OneToOne relationships"
+    
+    fields:
+      include: ["id", "name", "email", "bio", "birth_date", "is_verified", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      test_model:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+
+  # Comprehensive Test Model
+  TestModel:
+    api_name: "test_model"
+    api_description: "Comprehensive test model covering all Django field types"
+    
+    fields:
+      include: [
+        "id", "char_field", "text_field", "email_field", "url_field", "slug_field",
+        "integer_field", "big_integer_field", "small_integer_field", "positive_integer_field", 
+        "positive_big_integer_field", "float_field", "decimal_field",
+        "boolean_field", "null_boolean_field",
+        "date_field", "time_field", "datetime_field", "duration_field",
+        "file_field", "image_field",
+        "status", "priority", "json_field", "rating",
+        "created_at", "updated_at"
+      ]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+      write_only: ["file_field", "image_field"]
+    
+    relationships:
+      category:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+      author:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+      tags:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+
+  # Nested Relationship Models
+  Company:
+    api_name: "company"
+    api_description: "Company management for nested relationship testing"
+    
+    fields:
+      include: ["id", "name", "description", "website", "founded_date", "is_public", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      departments:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      employees:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      projects:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+
+  Department:
+    api_name: "department"
+    api_description: "Department management for nested relationship testing"
+    
+    fields:
+      include: ["id", "name", "description", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      company:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      manager:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      employees:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      projects:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      managed_departments:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+
+  Employee:
+    api_name: "employee"
+    api_description: "Employee management for nested relationship testing"
+    
+    fields:
+      include: [
+        "id", "first_name", "last_name", "email", "phone", "hire_date", 
+        "salary", "is_active", "created_at", "updated_at"
+      ]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      company:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      department:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      manager:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      subordinates:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      skills:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+      managed_departments:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      managed_projects:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      projects:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      assigned_tasks:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      created_tasks:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+
+  Project:
+    api_name: "project"
+    api_description: "Project management for complex relationship testing"
+    
+    fields:
+      include: [
+        "id", "name", "description", "start_date", "end_date", "budget",
+        "status", "priority", "created_at", "updated_at"
+      ]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      company:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      department:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      manager:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      team_members:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+      tags:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+      tasks:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+
+  Task:
+    api_name: "task"
+    api_description: "Task management for deep nested relationship testing"
+    
+    fields:
+      include: [
+        "id", "title", "description", "due_date", "completed", "priority",
+        "created_at", "updated_at"
+      ]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      project:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      assigned_to:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      created_by:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
+      tags:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 1
+
+  # Simple Models
+  SimpleModel:
+    api_name: "simple_model"
+    api_description: "Simple model for basic CRUD testing"
+    
+    fields:
+      include: ["id", "name", "description", "is_active", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      related_models:
+        include: true
+        nested_creation: true
+        nested_updates: true
+        max_depth: 2
+
+  RelatedModel:
+    api_name: "related_model"
+    api_description: "Related model for relationship testing"
+    
+    fields:
+      include: ["id", "name", "created_at", "updated_at"]
+      exclude: []
+      read_only: ["id", "created_at", "updated_at"]
+    
+    relationships:
+      simple_model:
+        include: true
+        nested_creation: false
+        nested_updates: false
+        max_depth: 1
