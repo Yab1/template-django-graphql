@@ -147,12 +147,11 @@ class StrawberryCRUDGenerator:
         if enum_name in self.generated_enums:
             return self.generated_enums[enum_name]
 
-        # Create enum values
+        # Create enum values - use the actual choice values as both keys and values
         enum_values = {}
         for choice_value, choice_label in field.choices:
-            # Convert to valid Python identifier
-            key = choice_value.upper().replace(" ", "_").replace("-", "_")
-            enum_values[key] = choice_value
+            # Use the actual choice value as both the key and value
+            enum_values[choice_value] = choice_value
 
         # Create the enum class using Enum constructor
         enum_class = Enum(enum_name, enum_values)
@@ -281,6 +280,10 @@ class StrawberryCRUDGenerator:
         if output_name in self.generated_types:
             return self.generated_types[output_name]
 
+        # Ensure config is loaded
+        if not self.config:
+            self.config = self._load_yaml_config(self.apps_list)
+
         # Get model configuration
         config = self.config.get(model_name, {})
         fields_config = config.get("fields", {})
@@ -307,12 +310,21 @@ class StrawberryCRUDGenerator:
             if not isinstance(rel_config, dict) or not rel_config.get("include", False):
                 continue
 
+            # Check if it's a direct field or reverse relationship
             if rel_name in [field.name for field in model._meta.get_fields()]:
-                field = model._meta.get_field(rel_name)
-                if field.get_internal_type() in ["ForeignKey", "OneToOneField"]:
-                    # For now, return the related model type
-                    attrs["__annotations__"][rel_name] = strawberry.ID
-                elif field.get_internal_type() == "ManyToManyField":
+                try:
+                    field = model._meta.get_field(rel_name)
+                    # Check if it's a reverse relationship
+                    if hasattr(field, "related_model"):
+                        # It's a reverse relationship, treat as ManyToMany for now
+                        attrs["__annotations__"][rel_name] = List[strawberry.ID]
+                    elif field.get_internal_type() in ["ForeignKey", "OneToOneField"]:
+                        # For now, return the related model type
+                        attrs["__annotations__"][rel_name] = strawberry.ID
+                    elif field.get_internal_type() == "ManyToManyField":
+                        attrs["__annotations__"][rel_name] = List[strawberry.ID]
+                except Exception:
+                    # It's a reverse relationship, treat as ManyToMany for now
                     attrs["__annotations__"][rel_name] = List[strawberry.ID]
 
         # Create the output type
@@ -409,7 +421,7 @@ class StrawberryCRUDGenerator:
             output_type = self.generated_types[f"{model_name}Type"]
 
             # Create closures to capture the model
-            def make_create_func(model, model_name, input_type, output_type):
+            def make_create_func(model, model_name, input_type, output_type, generator):
                 async def create(self, input: input_type) -> output_type:
                     """Create a new {model_name}"""
                     try:
@@ -422,14 +434,15 @@ class StrawberryCRUDGenerator:
                                     value = value.value
                                 model_data[field.name] = value
 
-                        return await sync_to_async(model.objects.create)(**model_data)
+                        obj = await sync_to_async(model.objects.create)(**model_data)
+                        return await generator._convert_to_graphql_type(obj, output_type)
                     except Exception as e:
                         logger.error(f"Create error for {model_name}: {e}")
                         raise Exception(f"Failed to create {model_name}: {str(e)}")
 
                 return create
 
-            def make_update_func(model, model_name, update_input_type, output_type):
+            def make_update_func(model, model_name, update_input_type, output_type, generator):
                 async def update(self, input: update_input_type) -> output_type:
                     """Update a {model_name}"""
                     try:
@@ -444,7 +457,7 @@ class StrawberryCRUDGenerator:
                                 setattr(obj, field.name, value)
 
                         await sync_to_async(obj.save)()
-                        return obj
+                        return await generator._convert_to_graphql_type(obj, output_type)
                     except Exception as e:
                         logger.error(f"Update error for {model_name}: {e}")
                         raise Exception(f"Failed to update {model_name}: {str(e)}")
@@ -466,10 +479,10 @@ class StrawberryCRUDGenerator:
 
             # Add methods to mutation_attrs
             mutation_attrs[f"create_{model_name.lower()}"] = strawberry.field(
-                make_create_func(model, model_name, input_type, output_type),
+                make_create_func(model, model_name, input_type, output_type, self),
             )
             mutation_attrs[f"update_{model_name.lower()}"] = strawberry.field(
-                make_update_func(model, model_name, update_input_type, output_type),
+                make_update_func(model, model_name, update_input_type, output_type, self),
             )
             mutation_attrs[f"delete_{model_name.lower()}"] = strawberry.field(make_delete_func(model, model_name))
 
@@ -478,6 +491,49 @@ class StrawberryCRUDGenerator:
         Mutation = strawberry.type(Mutation)
 
         return strawberry.Schema(query=Query, mutation=Mutation)
+
+    async def _convert_to_graphql_type(self, instance, output_type):
+        """Convert Django model instance to GraphQL type with proper enum and relationship handling"""
+        attrs = {}
+
+        # Get the output type annotations to know which fields to include
+        output_annotations = output_type.__annotations__
+
+        # Handle regular fields
+        for field in instance._meta.fields:
+            if field.name not in output_annotations:
+                continue
+
+            value = getattr(instance, field.name)
+
+            # Handle enum fields - return the actual choice value for GraphQL
+            if hasattr(field, "choices") and field.choices:
+                # Return the actual choice value (not the display label)
+                attrs[field.name] = value
+            else:
+                attrs[field.name] = value
+
+        # Handle relationships
+        config = self.config.get(instance.__class__.__name__, {})
+        relationships = config.get("relationships", {})
+
+        for rel_name, rel_config in relationships.items():
+            if not isinstance(rel_config, dict) or not rel_config.get("include", False):
+                continue
+
+            if hasattr(instance, rel_name):
+                related_obj = getattr(instance, rel_name)
+                if related_obj:
+                    if hasattr(related_obj, "all"):  # ManyToMany
+                        # Use sync_to_async for the queryset evaluation
+                        related_objects = await sync_to_async(list)(related_obj.all())
+                        attrs[rel_name] = [str(obj.id) for obj in related_objects]
+                    elif hasattr(related_obj, "id"):  # ForeignKey, OneToOne
+                        attrs[rel_name] = str(related_obj.id)
+                else:
+                    attrs[rel_name] = None
+
+        return output_type(**attrs)
 
     def _create_empty_schema(self) -> strawberry.Schema:
         """Create an empty schema when no models are found"""
