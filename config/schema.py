@@ -25,7 +25,7 @@ class CommonQuery:
 
 
 # Generate GraphQL queries and mutations
-graphql_schema = framework.generate_complete_schema(["family"])
+graphql_schema = framework.generate_complete_schema(["test_app"])
 
 # Merge all queries and mutations
 Query = merge_types("Query", (CommonQuery, UsersQuery, graphql_schema.query))
