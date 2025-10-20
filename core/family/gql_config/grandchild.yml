@@ -1,0 +1,42 @@
+# GrandChild Model Configuration
+# This file overrides defaults for GrandChild model only
+
+model: GrandChild
+
+# Override specific settings
+api_name: "grandchild"
+api_description: "Family grandchild management"
+
+# Security Configuration
+model_permissions:
+  - "family.view_grandchild"
+  - "family.add_grandchild"
+
+# Search Configuration
+search_fields:
+  - "name"
+  - "grand_parent__name"
+
+# Business Rules
+business_rules:
+  grandparent_required: "Grandparent must be provided"
+
+# Field Configuration - ONLY ACTUAL MODEL FIELDS
+fields:
+  include: ["id", "name", "gender", "grand_parent"]
+  exclude: []
+  read_only: []
+  write_only: []
+
+# Relationship Configuration
+relationships:
+  grand_parent:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  children:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1
