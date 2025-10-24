@@ -267,8 +267,10 @@ class Project(BaseModel):
 
     # Relationships
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="projects")
-    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="projects")
-    manager = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="managed_projects")
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="projects", null=True, blank=True)
+    manager = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="managed_projects", null=True, blank=True,
+    )
     team_members = models.ManyToManyField(Employee, related_name="projects", blank=True)
     tags = models.ManyToManyField(Tag, related_name="projects", blank=True)
 
