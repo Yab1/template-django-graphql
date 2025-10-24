@@ -245,7 +245,13 @@ models:
     relationships:
       company:
         include: true
-        nested_creation: false
+        nested_creation:
+          enabled: true
+          fields:
+            include: ["id", "name", "description", "website", "founded_date", "is_public"] 
+            exclude: []
+            read_only: []
+          pk: ["id"]  # If id is provided, fetch existing company instead of creating
         nested_updates: false
         max_depth: 1
       department:
@@ -314,7 +320,7 @@ models:
     api_description: "Simple model for basic CRUD testing"
     
     fields:
-      include: ["id", "name", "description", "is_active", "created_at", "updated_at"]
+      include: "__all__"  # Include all fields!
       exclude: []
       read_only: ["id", "created_at", "updated_at"]
     
