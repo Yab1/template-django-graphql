@@ -1073,7 +1073,7 @@ class StrawberryCRUDGenerator:
                     # Check if this would create a circular reference
                     if (model_name, related_model_name) in circular_refs:
                         logger.info(
-                            f"⚠️  Skipping circular relationship: {model_name}.{rel_name} -> {related_model_name} (would create infinite nesting)"
+                            f"⚠️  Skipping circular relationship: {model_name}.{rel_name} -> {related_model_name} (would create infinite nesting)",
                         )
                         continue
 
