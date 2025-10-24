@@ -1,5 +1,6 @@
 import strawberry
 from gqlauth.core.middlewares import JwtSchema
+from strawberry.extensions import QueryDepthLimiter
 from strawberry.schema.config import StrawberryConfig
 from strawberry.tools import merge_types
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -32,9 +33,13 @@ Query = merge_types("Query", (CommonQuery, UsersQuery, graphql_schema.query))
 Mutation = merge_types("Mutation", (UsersMutation, graphql_schema.mutation))
 
 # Use JwtSchema to inject request.user and JWT handling
+# Add QueryDepthLimiter to prevent infinite nesting (max depth 5)
 schema = JwtSchema(
     query=Query,
     mutation=Mutation,
-    extensions=[DjangoOptimizerExtension],
+    extensions=[
+        DjangoOptimizerExtension,
+        QueryDepthLimiter(max_depth=5),  # Limit query depth to 5 levels
+    ],
     config=StrawberryConfig(auto_camel_case=True),
 )
