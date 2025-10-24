@@ -4,6 +4,7 @@ Based on the graphi_crud pattern but for Strawberry Django
 """
 
 import logging
+from dataclasses import asdict, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
@@ -216,8 +217,14 @@ class StrawberryCRUDGenerator:
             fields_config = nested_config.get("fields", {})
             include_fields = fields_config.get("include", [])
             # Use a simplified approach: just add a suffix based on included fields
+            # Remove any special characters that might cause issues
             if include_fields:
-                input_name = f"{model_name}NestedInput_{len(include_fields)}fields"
+                # Create a simple hash of the fields to make it unique
+                field_hash = (
+                    abs(hash(tuple(sorted(include_fields if isinstance(include_fields, list) else [include_fields]))))
+                    % 10000
+                )
+                input_name = f"{model_name}NestedInput{field_hash}"
             else:
                 input_name = f"{model_name}NestedInput"
         else:
@@ -271,13 +278,17 @@ class StrawberryCRUDGenerator:
         # Check if this nested type supports pk lookup (for using existing objects)
         pk_fields = nested_config.get("pk", []) if nested_config else []
 
+        # Get optional fields from nested config (if specified)
+        optional_fields = nested_config.get("optional", []) if nested_config else []
+
         for field in model._meta.fields:
             # Include ID/PK fields if they're in the pk list
             if field.get_internal_type() in ["AutoField", "BigAutoField", "UUIDField"]:
                 if field.name in pk_fields or field.name in include_fields:
-                    # Include ID field for lookup
+                    # ID field is ALWAYS optional in nested types (for lookup OR creation)
                     field_type = self.get_strawberry_field_type(field)
                     attrs["__annotations__"][field.name] = Optional[field_type]
+                    attrs[field.name] = strawberry.field(default=strawberry.UNSET)
                 continue
 
             # Skip read-only fields
@@ -291,7 +302,16 @@ class StrawberryCRUDGenerator:
                 continue
 
             field_type = self.get_strawberry_field_type(field)
-            attrs["__annotations__"][field.name] = Optional[field_type]
+
+            # Check if field is optional (nullable in DB or explicitly in config)
+            is_optional = field.null or field.blank or field.name in optional_fields
+
+            if is_optional:
+                attrs["__annotations__"][field.name] = Optional[field_type]
+                attrs[field.name] = strawberry.field(default=strawberry.UNSET)
+            else:
+                # Required field
+                attrs["__annotations__"][field.name] = field_type
 
         # Add nested relationships if configured
         relationships = config.get("relationships", {})
@@ -394,7 +414,16 @@ class StrawberryCRUDGenerator:
                 continue
 
             field_type = self.get_strawberry_field_type(field)
-            attrs["__annotations__"][field.name] = field_type
+
+            # Check if field is optional (nullable or blank in Django model)
+            is_optional = field.null or field.blank
+
+            if is_optional:
+                attrs["__annotations__"][field.name] = Optional[field_type]
+                attrs[field.name] = strawberry.field(default=strawberry.UNSET)
+            else:
+                # Required field
+                attrs["__annotations__"][field.name] = field_type
 
         # Add relationship fields from YAML configuration
         relationships = config.get("relationships", {})
@@ -437,10 +466,13 @@ class StrawberryCRUDGenerator:
                             )
                             if nested_type:
                                 attrs["__annotations__"][rel_name] = Optional[nested_type]
+                                attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                             else:
                                 attrs["__annotations__"][rel_name] = Optional[strawberry.ID]
+                                attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                         else:
                             attrs["__annotations__"][rel_name] = Optional[strawberry.ID]
+                            attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                     elif field.get_internal_type() == "ManyToManyField":
                         # For ManyToMany, support both list of IDs and nested creation
                         if nested_creation:
@@ -455,25 +487,32 @@ class StrawberryCRUDGenerator:
                             )
                             if nested_type:
                                 attrs["__annotations__"][rel_name] = Optional[List[nested_type]]
+                                attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                             else:
                                 attrs["__annotations__"][rel_name] = Optional[List[strawberry.ID]]
+                                attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                         else:
                             attrs["__annotations__"][rel_name] = Optional[List[strawberry.ID]]
+                            attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                 except Exception as e:
                     # It's a reverse relationship, treat as ManyToMany for now
                     logger.warning(f"Could not process relationship {rel_name}: {e}")
                     nested_creation = rel_config.get("nested_creation", False)
                     if nested_creation:
                         attrs["__annotations__"][rel_name] = Optional[strawberry.scalars.JSON]
+                        attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                     else:
                         attrs["__annotations__"][rel_name] = Optional[List[strawberry.ID]]
+                        attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
             else:
                 # It's a reverse relationship, treat as ManyToMany for now
                 nested_creation = rel_config.get("nested_creation", False)
                 if nested_creation:
                     attrs["__annotations__"][rel_name] = Optional[strawberry.scalars.JSON]
+                    attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
                 else:
                     attrs["__annotations__"][rel_name] = Optional[List[strawberry.ID]]
+                    attrs[rel_name] = strawberry.field(default=strawberry.UNSET)
 
         # Create the input type
         input_type = type(input_name, (), attrs)
@@ -1073,7 +1112,7 @@ class StrawberryCRUDGenerator:
                     # Check if this would create a circular reference
                     if (model_name, related_model_name) in circular_refs:
                         logger.info(
-                            f"⚠️  Skipping circular relationship: {model_name}.{rel_name} -> {related_model_name} (would create infinite nesting)",
+                            f"⚠️  Skipping circular relationship: {model_name}.{rel_name} -> {related_model_name} (would create infinite nesting)",  # noqa: E501
                         )
                         continue
 
@@ -1178,10 +1217,40 @@ class StrawberryCRUDGenerator:
                         model_data = {}
                         relationship_data = {}
 
-                        # Process regular fields
+                        # Helper to normalize dataclass/dict inputs (replace UNSET, extract enum values)
+                        def _normalize_input_dict(obj_or_dict: Any) -> Dict[str, Any]:
+                            if is_dataclass(obj_or_dict):
+                                data = asdict(obj_or_dict)
+                            elif isinstance(obj_or_dict, dict):
+                                data = dict(obj_or_dict)
+                            else:
+                                return {}
+
+                            cleaned: Dict[str, Any] = {}
+                            for key, val in data.items():
+                                if val is strawberry.UNSET:
+                                    continue
+                                if hasattr(val, "value"):
+                                    cleaned[key] = val.value
+                                else:
+                                    cleaned[key] = val
+                            return cleaned
+
+                        # Process regular fields (exclude FK/OneToOne here; handled separately below)
                         for field in model._meta.fields:
+                            field_internal_type = None
+                            try:
+                                field_internal_type = field.get_internal_type()
+                            except Exception:
+                                pass
+
+                            if field_internal_type in ["ForeignKey", "OneToOneField"]:
+                                continue
+
                             if hasattr(input, field.name):
                                 value = getattr(input, field.name)
+                                if value is strawberry.UNSET:
+                                    continue
                                 if hasattr(value, "value"):  # Enum value
                                     value = value.value
                                 model_data[field.name] = value
@@ -1194,13 +1263,52 @@ class StrawberryCRUDGenerator:
                                 continue
                             if hasattr(input, rel_name):
                                 value = getattr(input, rel_name)
-                                if value is not None:
+                                if value is not None and value is not strawberry.UNSET:
                                     relationship_data[rel_name] = value
+
+                        # Handle ForeignKey/OneToOne relationships BEFORE creating the object
+                        for rel_name, rel_value in relationship_data.items():
+                            if rel_name in [field.name for field in model._meta.get_fields()]:
+                                try:
+                                    field = model._meta.get_field(rel_name)
+                                    rel_config = relationships.get(rel_name, {})
+                                    nested_creation = rel_config.get("nested_creation", False)
+
+                                    if field.get_internal_type() in ["ForeignKey", "OneToOneField"]:
+                                        # Handle ForeignKey/OneToOne relationships BEFORE creation
+                                        if rel_value and rel_value is not strawberry.UNSET:
+                                            if is_dataclass(rel_value):
+                                                rel_value = _normalize_input_dict(rel_value)
+
+                                            if isinstance(rel_value, dict) and nested_creation:
+                                                # Check if 'id' is provided in the dict (use existing object)
+                                                if "id" in rel_value and rel_value["id"]:
+                                                    # Fetch existing object by ID
+                                                    related_obj = await sync_to_async(field.related_model.objects.get)(
+                                                        id=rel_value["id"],
+                                                    )
+                                                else:
+                                                    # Nested creation - create the related object
+                                                    create_data = {k: v for k, v in rel_value.items() if k != "id"}
+                                                    related_obj = await sync_to_async(
+                                                        field.related_model.objects.create,
+                                                    )(
+                                                        **create_data,
+                                                    )
+                                                model_data[field.name] = related_obj
+                                            elif isinstance(rel_value, str):
+                                                # ID reference - fetch existing object
+                                                related_obj = await sync_to_async(field.related_model.objects.get)(
+                                                    id=rel_value,
+                                                )
+                                                model_data[field.name] = related_obj
+                                except Exception as rel_e:
+                                    logger.warning(f"Could not process relationship {rel_name}: {rel_e}")
 
                         # Create the object
                         obj = await sync_to_async(model.objects.create)(**model_data)
 
-                        # Handle relationships after creation
+                        # Handle ManyToMany relationships after creation
                         for rel_name, rel_value in relationship_data.items():
                             if rel_name in [field.name for field in model._meta.get_fields()]:
                                 try:
@@ -1213,6 +1321,10 @@ class StrawberryCRUDGenerator:
                                         if isinstance(rel_value, list):
                                             related_objects = []
                                             for item in rel_value:
+                                                # Normalize dataclass/dict items
+                                                if is_dataclass(item):
+                                                    item = _normalize_input_dict(item)
+
                                                 if isinstance(item, dict) and nested_creation:
                                                     # Check if 'id' is provided in the dict (use existing object)
                                                     if "id" in item and item["id"]:
@@ -1224,7 +1336,6 @@ class StrawberryCRUDGenerator:
                                                         )
                                                     else:
                                                         # Nested creation - create the related object
-                                                        # Remove id from the data if it's None
                                                         create_data = {k: v for k, v in item.items() if k != "id"}
                                                         related_obj = await sync_to_async(
                                                             field.related_model.objects.create,
@@ -1237,38 +1348,8 @@ class StrawberryCRUDGenerator:
                                                     )
                                                     related_objects.append(related_obj)
                                             await sync_to_async(obj.__getattribute__(rel_name).set)(related_objects)
-                                    else:
-                                        # Handle ForeignKey/OneToOne relationships
-                                        if rel_value:
-                                            if isinstance(rel_value, dict) and nested_creation:
-                                                # Check if 'id' is provided in the dict (use existing object)
-                                                if "id" in rel_value and rel_value["id"]:
-                                                    # Fetch existing object by ID
-                                                    related_obj = await sync_to_async(field.related_model.objects.get)(
-                                                        id=rel_value["id"],
-                                                    )
-                                                else:
-                                                    # Nested creation - create the related object
-                                                    # Remove id from the data if it's None
-                                                    create_data = {k: v for k, v in rel_value.items() if k != "id"}
-                                                    related_obj = await sync_to_async(
-                                                        field.related_model.objects.create,
-                                                    )(
-                                                        **create_data,
-                                                    )
-                                                setattr(obj, rel_name, related_obj)
-                                            elif isinstance(rel_value, str):
-                                                # ID reference - fetch existing object
-                                                related_obj = await sync_to_async(field.related_model.objects.get)(
-                                                    id=rel_value,
-                                                )
-                                                setattr(obj, rel_name, related_obj)
                                 except Exception as rel_e:
                                     logger.warning(f"Could not set relationship {rel_name}: {rel_e}")
-
-                        # Save if we made changes to relationships
-                        if relationship_data:
-                            await sync_to_async(obj.save)()
 
                         return await generator._convert_to_graphql_type(obj, output_type)
                     except Exception as e:
