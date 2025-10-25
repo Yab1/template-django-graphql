@@ -1,0 +1,15 @@
+model: RelatedModel
+api_name: "related_model"
+api_description: "Related model for relationship testing"
+
+fields:
+  include: ["id", "name", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  simple_model:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1

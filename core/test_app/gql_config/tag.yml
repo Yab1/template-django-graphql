@@ -1,0 +1,30 @@
+model: Tag
+api_name: "tag"
+api_description: "Tag management for testing ManyToMany relationships"
+
+fields:
+  include: ["id", "name", "color", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  test_models:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  employees:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  projects:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  tasks:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1

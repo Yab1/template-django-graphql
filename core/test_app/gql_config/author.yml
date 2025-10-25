@@ -1,0 +1,15 @@
+model: Author
+api_name: "author"
+api_description: "Author management for testing OneToOne relationships"
+
+fields:
+  include: ["id", "name", "email", "bio", "birth_date", "is_verified", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  test_model:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1

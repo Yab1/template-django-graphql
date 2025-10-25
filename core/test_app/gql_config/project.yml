@@ -1,0 +1,67 @@
+model: Project
+api_name: "project"
+api_description: "Project management for complex relationship testing"
+
+fields:
+  include: [
+    "id", "name", "description", "start_date", "end_date", "budget",
+    "status", "priority", "created_at", "updated_at"
+  ]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  company:
+    include: true
+    nested_creation:
+      enabled: true
+      fields:
+        include: ["id", "name", "description", "website", "founded_date", "is_public"] 
+        exclude: []
+        read_only: []
+      pk: ["id"]  
+    nested_updates: false
+    max_depth: 1
+  department:
+    include: true
+    nested_creation: 
+      enabled: true
+      fields:
+        include: ["id", "name", "description", "company"]
+        exclude: []
+        read_only: []
+        relationships:
+          company:
+            include: true
+            nested_creation: 
+              enabled: true
+              fields:
+                include: ["id"]
+                exclude: []
+                read_only: []
+                pk: ["id"]
+              nested_updates: false
+            max_depth: 1
+      pk: ["id"] 
+    nested_updates: false
+    max_depth: 1
+  manager:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  team_members:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  tags:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1
+  tasks:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2

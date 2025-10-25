@@ -251,12 +251,30 @@ models:
             include: ["id", "name", "description", "website", "founded_date", "is_public"] 
             exclude: []
             read_only: []
-          pk: ["id"]  # If id is provided, fetch existing company instead of creating
+          pk: ["id"]  
         nested_updates: false
         max_depth: 1
       department:
         include: true
-        nested_creation: false
+        nested_creation: 
+          enabled: true
+          fields:
+            include: ["id", "name", "description", "company"]
+            exclude: []
+            read_only: []
+            relationships:
+              company:
+                include: true
+                nested_creation: 
+                  enabled: true
+                  fields:
+                    include: ["id"]
+                    exclude: []
+                    read_only: []
+                    pk: ["id"]
+                  nested_updates: false
+                max_depth: 1
+          pk: ["id"] 
         nested_updates: false
         max_depth: 1
       manager:

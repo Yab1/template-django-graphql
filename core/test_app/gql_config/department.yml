@@ -1,0 +1,35 @@
+model: Department
+api_name: "department"
+api_description: "Department management for nested relationship testing"
+
+fields:
+  include: ["id", "name", "description", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  company:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  manager:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  employees:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  projects:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  managed_departments:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1

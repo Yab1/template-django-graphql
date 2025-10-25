@@ -1,0 +1,35 @@
+model: TestModel
+api_name: "test_model"
+api_description: "Comprehensive test model covering all Django field types"
+
+fields:
+  include: [
+    "id", "char_field", "text_field", "email_field", "url_field", "slug_field",
+    "integer_field", "big_integer_field", "small_integer_field", "positive_integer_field", 
+    "positive_big_integer_field", "float_field", "decimal_field",
+    "boolean_field", "null_boolean_field",
+    "date_field", "time_field", "datetime_field", "duration_field",
+    "file_field", "image_field",
+    "status", "priority", "json_field", "rating",
+    "created_at", "updated_at"
+  ]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+  write_only: ["file_field", "image_field"]
+
+relationships:
+  category:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1
+  author:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1
+  tags:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1

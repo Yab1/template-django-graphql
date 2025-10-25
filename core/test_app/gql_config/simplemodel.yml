@@ -1,0 +1,15 @@
+model: SimpleModel
+api_name: "simple_model"
+api_description: "Simple model for basic CRUD testing"
+
+fields:
+  include: "__all__"  # Include all fields!
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  related_models:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2

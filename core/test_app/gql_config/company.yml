@@ -1,0 +1,25 @@
+model: Company
+api_name: "company"
+api_description: "Company management for nested relationship testing"
+
+fields:
+  include: ["id", "name", "description", "website", "founded_date", "is_public", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  departments:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  employees:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  projects:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2

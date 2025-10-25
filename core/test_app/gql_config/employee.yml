@@ -1,0 +1,63 @@
+model: Employee
+api_name: "employee"
+api_description: "Employee management for nested relationship testing"
+
+fields:
+  include: [
+    "id", "first_name", "last_name", "email", "phone", "hire_date", 
+    "salary", "is_active", "created_at", "updated_at"
+  ]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  company:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  department:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  manager:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  subordinates:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  skills:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 1
+  managed_departments:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
+  managed_projects:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  projects:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  assigned_tasks:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2
+  created_tasks:
+    include: true
+    nested_creation: true
+    nested_updates: true
+    max_depth: 2

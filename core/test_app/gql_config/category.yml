@@ -1,0 +1,15 @@
+model: Category
+api_name: "category"
+api_description: "Category management for testing ForeignKey relationships"
+
+fields:
+  include: ["id", "name", "description", "is_active", "created_at", "updated_at"]
+  exclude: []
+  read_only: ["id", "created_at", "updated_at"]
+
+relationships:
+  test_models:
+    include: true
+    nested_creation: false
+    nested_updates: false
+    max_depth: 1
